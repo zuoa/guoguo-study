@@ -1,0 +1,203 @@
+{% extends "base.html" %}
+
+{% block title %}{{ chapter.name }} - 管理 - 英语单词学习系统{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h1>
+                <i class="fas fa-bookmark"></i> {{ chapter.name }}
+                <small class="text-muted">管理</small>
+            </h1>
+            <a href="{{ url_for('admin_dashboard') }}" class="btn btn-secondary">
+                <i class="fas fa-arrow-left"></i> 返回列表
+            </a>
+        </div>
+        
+        <div class="row">
+            <!-- 内容管理 -->
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header bg-primary text-white">
+                        <h5 class="mb-0">
+                            <i class="fas fa-list"></i> 内容项目 ({{ chapter.contents|length }})
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        {% if chapter.contents %}
+                            <div class="row">
+                                {% for content in chapter.contents %}
+                                <div class="col-md-6 col-lg-4 mb-3">
+                                    <div class="card border-0 shadow-sm h-100">
+                                        <div class="card-body">
+                                            <div class="d-flex justify-content-between align-items-start mb-2">
+                                                <h6 class="card-title mb-1">{{ content.text }}</h6>
+                                                <div class="dropdown">
+                                                    <button class="btn btn-sm btn-outline-secondary dropdown-toggle" 
+                                                            type="button" data-bs-toggle="dropdown">
+                                                        <i class="fas fa-ellipsis-v"></i>
+                                                    </button>
+                                                    <ul class="dropdown-menu">
+                                                        <li>
+                                                            <form method="POST" action="{{ url_for('delete_content', content_id=content.id) }}" 
+                                                                  onsubmit="return confirm('确定删除这个内容吗？')">
+                                                                <button type="submit" class="dropdown-item text-danger">
+                                                                    <i class="fas fa-trash me-2"></i> 删除
+                                                                </button>
+                                                            </form>
+                                                        </li>
+                                                    </ul>
+                                                </div>
+                                            </div>
+                                            
+                                            {% if content.phonetic %}
+                                            <div class="mb-2">
+                                                <small class="text-muted">音标：</small>
+                                                <span class="phonetic-text">{{ content.phonetic }}</span>
+                                            </div>
+                                            {% endif %}
+                                            
+                                            {% if content.translation %}
+                                            <div class="mb-2">
+                                                <small class="text-muted">翻译：</small>
+                                                <div class="translation-text">{{ content.translation }}</div>
+                                            </div>
+                                            {% endif %}
+                                            
+                                            <div class="d-flex justify-content-between align-items-center">
+                                                <small class="text-muted">
+                                                    {{ content.created_date.strftime('%m-%d %H:%M') if content.created_date else '未知' }}
+                                                </small>
+                                                <button class="btn btn-sm btn-outline-primary play-word" 
+                                                        onclick="playAudio('{{ content.text }}', this)">
+                                                    <i class="fas fa-play"></i>
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                {% endfor %}
+                            </div>
+                        {% else %}
+                            <div class="text-center py-5">
+                                <i class="fas fa-inbox fa-3x text-muted mb-3"></i>
+                                <h5 class="text-muted">暂无内容</h5>
+                                <p class="text-muted">可以通过添加章节的方式批量导入内容</p>
+                                <a href="{{ url_for('add_chapter') }}" class="btn btn-primary">
+                                    <i class="fas fa-plus me-2"></i> 添加内容
+                                </a>
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 兼容旧数据的单词和短语显示 -->
+            {% if chapter.words or chapter.phrases %}
+            <div class="col-lg-6 mt-4">
+                <div class="card">
+                    <div class="card-header bg-info text-white">
+                        <h5 class="mb-0">
+                            <i class="fas fa-font"></i> 历史单词 ({{ chapter.words|length }})
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        {% if chapter.words %}
+                            <div class="table-responsive">
+                                <table class="table table-sm">
+                                    <thead>
+                                        <tr>
+                                            <th>单词</th>
+                                            <th>翻译</th>
+                                            <th>操作</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for word in chapter.words %}
+                                        <tr>
+                                            <td><strong>{{ word.word }}</strong></td>
+                                            <td>
+                                                <small class="text-muted">
+                                                    {% if word.translation %}
+                                                        {{ word.translation }}
+                                                    {% else %}
+                                                        未翻译
+                                                    {% endif %}
+                                                </small>
+                                            </td>
+                                            <td>
+                                                <form method="POST" action="{{ url_for('delete_word', word_id=word.id) }}" 
+                                                      style="display: inline;" onsubmit="return confirm('确定删除这个单词吗？')">
+                                                    <button type="submit" class="btn btn-sm btn-outline-danger">
+                                                        <i class="fas fa-trash"></i>
+                                                    </button>
+                                                </form>
+                                            </td>
+                                        </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                        {% else %}
+                            <p class="text-muted">暂无历史单词</p>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            
+            <div class="col-lg-6 mt-4">
+                <div class="card">
+                    <div class="card-header bg-warning text-white">
+                        <h5 class="mb-0">
+                            <i class="fas fa-quote-left"></i> 历史短语 ({{ chapter.phrases|length }})
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        {% if chapter.phrases %}
+                            <div class="table-responsive">
+                                <table class="table table-sm">
+                                    <thead>
+                                        <tr>
+                                            <th>短语</th>
+                                            <th>翻译</th>
+                                            <th>操作</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for phrase in chapter.phrases %}
+                                        <tr>
+                                            <td><strong>{{ phrase.phrase }}</strong></td>
+                                            <td>
+                                                <small class="text-muted">
+                                                    {% if phrase.translation %}
+                                                        {{ phrase.translation }}
+                                                    {% else %}
+                                                        未翻译
+                                                    {% endif %}
+                                                </small>
+                                            </td>
+                                            <td>
+                                                <form method="POST" action="{{ url_for('delete_phrase', phrase_id=phrase.id) }}" 
+                                                      style="display: inline;" onsubmit="return confirm('确定删除这个短语吗？')">
+                                                    <button type="submit" class="btn btn-sm btn-outline-danger">
+                                                        <i class="fas fa-trash"></i>
+                                                    </button>
+                                                </form>
+                                            </td>
+                                        </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                        {% else %}
+                            <p class="text-muted">暂无历史短语</p>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

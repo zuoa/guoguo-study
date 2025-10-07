@@ -1,0 +1,966 @@
+{% extends "base.html" %}
+
+{% block title %}学习首页 - 英语单词学习系统{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <div class="d-flex justify-content-between align-items-center mb-5 flex-wrap gap-3">
+            <div class="flex-grow-1">
+                <h1 class="display-5 fw-bold text-gradient">
+                    <i class="fas fa-graduation-cap me-3"></i> 学习章节
+                </h1>
+                <p class="lead text-muted mb-0">选择一个章节开始你的英语学习之旅</p>
+            </div>
+            <div class="flex-shrink-0">
+                <button type="button" class="btn btn-outline-primary tts-config-btn" data-bs-toggle="modal" data-bs-target="#ttsConfigModal">
+                    <i class="fas fa-volume-up me-2"></i> 
+                    <span class="btn-text">语音配置</span>
+                </button>
+            </div>
+        </div>
+        
+        {% if chapters %}
+            <div class="row g-3 g-md-4">
+                {% for chapter in chapters %}
+                <div class="col-12 col-sm-6 col-md-6 col-lg-4">
+                    <div class="card h-100 learning-card">
+                        <div class="card-body d-flex flex-column">
+                            <div class="d-flex align-items-center mb-3">
+                                <div class="chapter-icon me-3">
+                                    <i class="fas fa-bookmark"></i>
+                                </div>
+                                <div class="flex-grow-1">
+                                    <h5 class="card-title mb-1 fw-semibold">{{ chapter.name }}</h5>
+                                    <p class="card-text text-muted mb-0">
+                                        <small>
+                                            <i class="fas fa-calendar-alt me-1"></i> 
+                                            {{ chapter.created_date.strftime('%Y-%m-%d') }}
+                                        </small>
+                                    </p>
+                                </div>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <div class="d-flex gap-2 flex-wrap">
+                                    <span class="badge bg-primary rounded-pill">
+                                        <i class="fas fa-list me-1"></i> {{ chapter.contents|length }} 个内容
+                                    </span>
+                                    {% if chapter.words|length > 0 %}
+                                    <span class="badge bg-info rounded-pill">
+                                        <i class="fas fa-font me-1"></i> {{ chapter.words|length }} 个历史单词
+                                    </span>
+                                    {% endif %}
+                                    {% if chapter.phrases|length > 0 %}
+                                    <span class="badge bg-warning rounded-pill">
+                                        <i class="fas fa-comments me-1"></i> {{ chapter.phrases|length }} 个历史短语
+                                    </span>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            
+                            <div class="mt-auto">
+                                <div class="d-grid gap-2">
+                                    <a href="{{ url_for('chapter_detail', chapter_id=chapter.id) }}" 
+                                       class="btn btn-primary">
+                                        <i class="fas fa-play me-2"></i> 开始学习
+                                    </a>
+                                    <a href="{{ url_for('dictation_mode', chapter_id=chapter.id) }}" 
+                                       class="btn btn-outline-secondary">
+                                        <i class="fas fa-headphones me-2"></i> 听写模式
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="learning-progress">
+                            <div class="progress-bar"></div>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        {% else %}
+            <div class="empty-state">
+                <div class="empty-state-icon">
+                    <i class="fas fa-book-open"></i>
+                </div>
+                <h3>暂无学习章节</h3>
+                <p class="text-muted mb-4">管理员还没有添加任何学习章节，请稍后再来查看</p>
+                <div class="empty-state-suggestions">
+                    <h6 class="fw-semibold mb-3">学习建议：</h6>
+                    <div class="row text-start">
+                        <div class="col-md-4">
+                            <div class="suggestion-item">
+                                <i class="fas fa-lightbulb text-warning me-2"></i>
+                                制定学习计划
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="suggestion-item">
+                                <i class="fas fa-target text-info me-2"></i>
+                                设置学习目标
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="suggestion-item">
+                                <i class="fas fa-clock text-success me-2"></i>
+                                坚持每日学习
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- TTS配置模态框 -->
+<div class="modal fade" id="ttsConfigModal" tabindex="-1" aria-labelledby="ttsConfigModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="ttsConfigModalLabel">
+                    <i class="fas fa-volume-up me-2"></i> 语音播放配置
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form id="ttsConfigForm">
+                    <!-- TTS模式选择 -->
+                    <div class="mb-4">
+                        <label class="form-label fw-semibold">
+                            <i class="fas fa-cogs me-2"></i> 语音模式
+                        </label>
+                        <div class="row g-3">
+                            <div class="col-md-4">
+                                <div class="form-check card-check">
+                                    <input class="form-check-input" type="radio" name="tts_mode" id="mode_auto" value="auto">
+                                    <label class="form-check-label" for="mode_auto">
+                                        <div class="card-check-content">
+                                            <i class="fas fa-magic text-primary"></i>
+                                            <div class="mt-2">
+                                                <strong>智能模式</strong>
+                                                <div class="small text-muted">自动选择最佳方案</div>
+                                            </div>
+                                        </div>
+                                    </label>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="form-check card-check">
+                                    <input class="form-check-input" type="radio" name="tts_mode" id="mode_browser" value="browser">
+                                    <label class="form-check-label" for="mode_browser">
+                                        <div class="card-check-content">
+                                            <i class="fas fa-desktop text-success"></i>
+                                            <div class="mt-2">
+                                                <strong>浏览器语音</strong>
+                                                <div class="small text-muted">使用本地TTS</div>
+                                            </div>
+                                        </div>
+                                    </label>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="form-check card-check">
+                                    <input class="form-check-input" type="radio" name="tts_mode" id="mode_server" value="server">
+                                    <label class="form-check-label" for="mode_server">
+                                        <div class="card-check-content">
+                                            <i class="fas fa-server text-info"></i>
+                                            <div class="mt-2">
+                                                <strong>服务器语音</strong>
+                                                <div class="small text-muted">使用gTTS服务</div>
+                                            </div>
+                                        </div>
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 服务器TTS配置 -->
+                    <div class="mb-4" id="serverConfig">
+                        <h6 class="fw-semibold mb-3">
+                            <i class="fas fa-server me-2"></i> 服务器语音配置
+                        </h6>
+                        <div class="row">
+                            <div class="col-md-6">
+                                <label for="serverTimeout" class="form-label">请求超时时间</label>
+                                <div class="input-group">
+                                    <input type="range" class="form-range" id="serverTimeout" name="server_timeout" min="3" max="30" step="1">
+                                    <span class="input-group-text" id="serverTimeoutValue">8</span>
+                                    <span class="input-group-text">秒</span>
+                                </div>
+                                <div class="form-text">服务器语音请求的最大等待时间</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 浏览器TTS配置 -->
+                    <div class="mb-4" id="browserConfig">
+                        <h6 class="fw-semibold mb-3">
+                            <i class="fas fa-desktop me-2"></i> 浏览器语音配置
+                        </h6>
+                        <div class="row g-3">
+                            <div class="col-md-4">
+                                <label for="browserRate" class="form-label">语音速度</label>
+                                <div class="input-group">
+                                    <input type="range" class="form-range" id="browserRate" name="browser_rate" min="0.1" max="3.0" step="0.1">
+                                    <span class="input-group-text" id="browserRateValue">0.8</span>
+                                </div>
+                                <div class="form-text">播放速度：慢 ← → 快</div>
+                            </div>
+                            <div class="col-md-4">
+                                <label for="browserPitch" class="form-label">音调</label>
+                                <div class="input-group">
+                                    <input type="range" class="form-range" id="browserPitch" name="browser_pitch" min="0.0" max="2.0" step="0.1">
+                                    <span class="input-group-text" id="browserPitchValue">1.0</span>
+                                </div>
+                                <div class="form-text">音调高低：低 ← → 高</div>
+                            </div>
+                            <div class="col-md-4">
+                                <label for="browserVolume" class="form-label">音量</label>
+                                <div class="input-group">
+                                    <input type="range" class="form-range" id="browserVolume" name="browser_volume" min="0.0" max="1.0" step="0.1">
+                                    <span class="input-group-text" id="browserVolumeValue">1.0</span>
+                                </div>
+                                <div class="form-text">播放音量：小 ← → 大</div>
+                            </div>
+                        </div>
+                        
+                        <div class="row mt-3">
+                            <div class="col-md-8">
+                                <label for="preferredVoice" class="form-label">偏好语音</label>
+                                <select class="form-select" id="preferredVoice" name="preferred_voice">
+                                    <option value="">使用系统默认</option>
+                                </select>
+                                <div class="form-text">选择您喜欢的语音类型</div>
+                            </div>
+                            <div class="col-md-4 d-flex align-items-end">
+                                <button type="button" class="btn btn-outline-primary" id="testVoiceBtn">
+                                    <i class="fas fa-play me-1"></i> 试听
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                    <i class="fas fa-times me-2"></i> 取消
+                </button>
+                <button type="button" class="btn btn-primary" id="saveTTSConfig">
+                    <i class="fas fa-save me-2"></i> 保存配置
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.text-gradient {
+    background: var(--primary-gradient);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+
+.learning-card {
+    position: relative;
+    overflow: hidden;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.learning-card:hover {
+    transform: translateY(-8px);
+}
+
+.chapter-icon {
+    width: 50px;
+    height: 50px;
+    border-radius: 12px;
+    background: var(--primary-gradient);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-size: 1.2rem;
+}
+
+.learning-progress {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 4px;
+    background: rgba(102, 126, 234, 0.1);
+}
+
+.progress-bar {
+    height: 100%;
+    background: var(--primary-gradient);
+    width: 0%;
+    transition: width 0.3s ease;
+}
+
+.learning-card:hover .progress-bar {
+    width: 100%;
+}
+
+.empty-state {
+    text-align: center;
+    padding: 4rem 2rem;
+}
+
+.empty-state-icon {
+    font-size: 4rem;
+    color: #e2e8f0;
+    margin-bottom: 2rem;
+}
+
+.empty-state-suggestions {
+    max-width: 600px;
+    margin: 0 auto;
+    padding: 2rem;
+    background: rgba(255, 255, 255, 0.8);
+    border-radius: 16px;
+    backdrop-filter: blur(10px);
+}
+
+.suggestion-item {
+    padding: 0.75rem;
+    background: white;
+    border-radius: 8px;
+    margin-bottom: 0.5rem;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+    transition: transform 0.2s ease;
+}
+
+.suggestion-item:hover {
+    transform: translateY(-2px);
+}
+
+.badge.rounded-pill {
+    font-size: 0.75rem;
+    padding: 0.5rem 0.75rem;
+}
+
+/* TTS配置样式 */
+.card-check {
+    margin: 0;
+}
+
+.card-check .form-check-input {
+    display: none;
+}
+
+.card-check .form-check-label {
+    display: block;
+    width: 100%;
+    cursor: pointer;
+    border: 2px solid #e2e8f0;
+    border-radius: 8px;
+    padding: 1rem;
+    text-align: center;
+    transition: all 0.3s ease;
+    background: white;
+    margin: 0;
+}
+
+.card-check .form-check-label:hover {
+    border-color: var(--primary-color);
+    transform: translateY(-2px);
+    box-shadow: 0 8px 25px rgba(16, 185, 129, 0.15);
+    background: rgba(255, 255, 255, 1);
+}
+
+.card-check .form-check-input:checked + .form-check-label {
+    border-color: var(--primary-color);
+    background: var(--primary-gradient);
+    color: white;
+    box-shadow: 0 8px 25px rgba(16, 185, 129, 0.3);
+}
+
+.card-check-content i {
+    font-size: 1.5rem;
+    margin-bottom: 0.5rem;
+}
+
+.form-range {
+    width: 100%;
+}
+
+.input-group .form-range {
+    border: none;
+    background: none;
+}
+
+#ttsConfigModal .modal-content {
+    border-radius: 20px;
+    border: none;
+    box-shadow: 0 25px 50px rgba(0, 0, 0, 0.15);
+    backdrop-filter: blur(10px);
+    background: rgba(255, 255, 255, 0.95);
+}
+
+#ttsConfigModal .modal-header {
+    background: var(--primary-gradient);
+    color: white;
+    border-radius: 20px 20px 0 0;
+    padding: 1.5rem 2rem;
+    border-bottom: none;
+}
+
+#ttsConfigModal .modal-header .btn-close {
+    filter: brightness(0) invert(1);
+    opacity: 0.8;
+    transition: opacity 0.3s ease;
+}
+
+/* TTS配置样式 */
+.card-check {
+    margin: 0;
+}
+
+.card-check .form-check-input {
+    display: none;
+}
+
+.card-check .form-check-label {
+    display: block;
+    width: 100%;
+    cursor: pointer;
+    border: 2px solid #e2e8f0;
+    border-radius: 8px;
+    padding: 1rem;
+    text-align: center;
+    transition: all 0.3s ease;
+    background: white;
+    margin: 0;
+}
+
+.card-check .form-check-label:hover {
+    border-color: var(--primary-color);
+    transform: translateY(-2px);
+    box-shadow: 0 8px 25px rgba(16, 185, 129, 0.15);
+    background: rgba(255, 255, 255, 1);
+}
+
+.card-check .form-check-input:checked + .form-check-label {
+    border-color: var(--primary-color);
+    background: var(--primary-gradient);
+    color: white;
+    box-shadow: 0 8px 25px rgba(16, 185, 129, 0.3);
+}
+
+.card-check-content i {
+    font-size: 1.5rem;
+    margin-bottom: 0.5rem;
+}
+
+.form-range {
+    width: 100%;
+}
+
+.input-group .form-range {
+    border: none;
+    background: none;
+}
+
+#ttsConfigModal .modal-content {
+    border-radius: 20px;
+    border: none;
+    box-shadow: 0 25px 50px rgba(0, 0, 0, 0.15);
+    backdrop-filter: blur(10px);
+    background: rgba(255, 255, 255, 0.95);
+}
+
+#ttsConfigModal .modal-header {
+    background: var(--primary-gradient);
+    color: white;
+    border-radius: 20px 20px 0 0;
+    padding: 1.5rem 2rem;
+    border-bottom: none;
+}
+
+#ttsConfigModal .modal-header .btn-close {
+    filter: brightness(0) invert(1);
+    opacity: 0.8;
+    transition: opacity 0.3s ease;
+}
+</style>
+
+<!-- 移动端优化样式 -->
+<style>
+/* 移动端TTS配置界面优化 */
+@media (max-width: 768px) {
+    /* 顶部按钮优化 */
+    .tts-config-btn {
+        padding: 0.5rem 1rem;
+        font-size: 0.875rem;
+        border-radius: 10px;
+        min-height: 44px;
+    }
+    
+    .tts-config-btn .btn-text {
+        display: none;
+    }
+    
+    .tts-config-btn i {
+        margin: 0;
+        font-size: 1.1rem;
+    }
+    
+    /* 标题区域优化 */
+    .d-flex.justify-content-between.align-items-center.mb-5 {
+        margin-bottom: 2rem !important;
+    }
+    
+    .display-5 {
+        font-size: 1.5rem;
+    }
+    
+    .lead {
+        font-size: 1rem;
+    }
+    #ttsConfigModal .modal-dialog {
+        margin: 0.5rem;
+        max-width: calc(100vw - 1rem);
+    }
+    
+    #ttsConfigModal .modal-content {
+        border-radius: 16px;
+    }
+    
+    #ttsConfigModal .modal-header {
+        padding: 1.25rem 1.5rem;
+        border-radius: 16px 16px 0 0;
+    }
+    
+    #ttsConfigModal .modal-header .modal-title {
+        font-size: 1.1rem;
+    }
+    
+    #ttsConfigModal .modal-body {
+        padding: 1.5rem;
+    }
+    
+    #ttsConfigModal .modal-footer {
+        padding: 1.25rem 1.5rem;
+        border-radius: 0 0 16px 16px;
+        gap: 0.75rem;
+    }
+    
+    #ttsConfigModal .modal-footer .btn {
+        flex: 1;
+        min-width: auto;
+    }
+    
+    /* TTS模式选择卡片优化 */
+    .card-check .form-check-label {
+        padding: 1rem 0.75rem;
+        border-radius: 12px;
+    }
+    
+    .card-check-content {
+        gap: 0.5rem;
+    }
+    
+    .card-check-content i {
+        font-size: 1.5rem;
+    }
+    
+    .card-check .form-check-label strong {
+        font-size: 0.9rem;
+    }
+    
+    .card-check .form-check-label .small {
+        font-size: 0.75rem;
+    }
+    
+    /* 滑块控件优化 */
+    .input-group {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 0.5rem;
+    }
+    
+    .input-group .form-range {
+        order: 1;
+    }
+    
+    .input-group .input-group-text {
+        order: 2;
+        text-align: center;
+        font-weight: 600;
+        background: var(--primary-gradient);
+        color: white;
+        border: none;
+        padding: 0.5rem;
+        border-radius: 8px;
+    }
+    
+    /* 表单标签优化 */
+    #ttsConfigModal .form-label {
+        font-size: 0.875rem;
+        font-weight: 600;
+        margin-bottom: 0.5rem;
+    }
+    
+    #ttsConfigModal .form-text {
+        font-size: 0.75rem;
+        margin-top: 0.25rem;
+    }
+    
+    /* 段落标题优化 */
+    #ttsConfigModal h6.fw-semibold {
+        font-size: 0.95rem;
+        margin-bottom: 0.75rem;
+        padding-bottom: 0.5rem;
+    }
+    
+    /* 下拉选择框优化 */
+    #ttsConfigModal .form-select {
+        font-size: 0.875rem;
+        padding: 0.75rem;
+    }
+    
+    /* 按钮优化 */
+    #ttsConfigModal .btn {
+        padding: 0.75rem 1rem;
+        font-size: 0.875rem;
+        border-radius: 10px;
+    }
+    
+    /* 试听按钮优化 */
+    #testVoiceBtn {
+        width: 100%;
+        margin-top: 0.5rem;
+    }
+    
+    /* 配置区块间距优化 */
+    #ttsConfigModal .mb-4 {
+        margin-bottom: 1.5rem !important;
+    }
+    
+    #ttsConfigModal .row.g-3 {
+        --bs-gutter-x: 1rem;
+        --bs-gutter-y: 1rem;
+    }
+    
+    /* 三列布局改为单列 */
+    #browserConfig .col-md-4 {
+        flex: 0 0 100%;
+        max-width: 100%;
+    }
+    
+    /* 语音选择和试听按钮布局优化 */
+    #browserConfig .row.mt-3 {
+        margin-top: 1rem !important;
+    }
+    
+    #browserConfig .row.mt-3 .col-md-8 {
+        flex: 0 0 100%;
+        max-width: 100%;
+        margin-bottom: 0.75rem;
+    }
+    
+    #browserConfig .row.mt-3 .col-md-4 {
+        flex: 0 0 100%;
+        max-width: 100%;
+    }
+}
+
+/* 超小屏设备优化 */
+@media (max-width: 480px) {
+    #ttsConfigModal .modal-dialog {
+        margin: 0.25rem;
+        max-width: calc(100vw - 0.5rem);
+    }
+    
+    #ttsConfigModal .modal-header {
+        padding: 1rem 1.25rem;
+    }
+    
+    #ttsConfigModal .modal-body {
+        padding: 1.25rem;
+    }
+    
+    #ttsConfigModal .modal-footer {
+        padding: 1rem 1.25rem;
+        flex-direction: column;
+    }
+    
+    /* TTS模式选择卡片 */
+    .card-check .form-check-label {
+        padding: 0.875rem 0.5rem;
+    }
+    
+    .card-check-content i {
+        font-size: 1.25rem;
+    }
+    
+    .card-check .form-check-label strong {
+        font-size: 0.825rem;
+    }
+    
+    .card-check .form-check-label .small {
+        font-size: 0.7rem;
+    }
+    
+    /* 三列改为单列显示 */
+    .row .col-md-4 {
+        flex: 0 0 100%;
+        max-width: 100%;
+        margin-bottom: 1rem;
+    }
+    
+    .row .col-md-4:last-child {
+        margin-bottom: 0;
+    }
+}
+
+/* 横屏模式优化 */
+@media (max-height: 600px) and (orientation: landscape) {
+    #ttsConfigModal .modal-dialog {
+        margin: 0.5rem auto;
+        max-height: calc(100vh - 1rem);
+    }
+    
+    #ttsConfigModal .modal-content {
+        max-height: 100%;
+        display: flex;
+        flex-direction: column;
+    }
+    
+    #ttsConfigModal .modal-body {
+        overflow-y: auto;
+        flex: 1;
+        padding: 1rem 1.5rem;
+    }
+    
+    #ttsConfigModal .modal-header {
+        padding: 1rem 1.5rem;
+    }
+    
+    #ttsConfigModal .modal-footer {
+        padding: 1rem 1.5rem;
+    }
+    
+    /* 紧凑布局 */
+    #ttsConfigModal .mb-4 {
+        margin-bottom: 1rem !important;
+    }
+    
+    .card-check .form-check-label {
+        padding: 0.75rem;
+    }
+    
+    .card-check-content {
+        gap: 0.25rem;
+    }
+    
+    .card-check-content i {
+        font-size: 1.25rem;
+        margin-bottom: 0;
+    }
+}
+
+/* 触摸设备优化 */
+@media (pointer: coarse) {
+    #ttsConfigModal .btn {
+        min-height: 44px;
+        min-width: 44px;
+    }
+    
+    .card-check .form-check-label {
+        min-height: 80px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+    
+    #ttsConfigModal .form-range {
+        height: 8px;
+    }
+    
+    #ttsConfigModal .form-range::-webkit-slider-thumb {
+        height: 24px;
+        width: 24px;
+    }
+    
+    #ttsConfigModal .form-select {
+        min-height: 44px;
+    }
+}
+
+/* iOS安全区域适配 */
+@supports (padding-top: env(safe-area-inset-top)) {
+    @media (max-width: 768px) {
+        #ttsConfigModal .modal-dialog {
+            margin-top: max(0.5rem, env(safe-area-inset-top));
+            margin-bottom: max(0.5rem, env(safe-area-inset-bottom));
+        }
+    }
+}
+</style>
+
+<script>
+// TTS配置管理
+document.addEventListener('DOMContentLoaded', function() {
+    const modal = document.getElementById('ttsConfigModal');
+    const form = document.getElementById('ttsConfigForm');
+    const saveBtn = document.getElementById('saveTTSConfig');
+    const testVoiceBtn = document.getElementById('testVoiceBtn');
+    
+    // 滑块值显示更新
+    function updateSliderValues() {
+        document.getElementById('serverTimeoutValue').textContent = document.getElementById('serverTimeout').value;
+        document.getElementById('browserRateValue').textContent = document.getElementById('browserRate').value;
+        document.getElementById('browserPitchValue').textContent = document.getElementById('browserPitch').value;
+        document.getElementById('browserVolumeValue').textContent = document.getElementById('browserVolume').value;
+    }
+    
+    // 绑定滑块事件
+    ['serverTimeout', 'browserRate', 'browserPitch', 'browserVolume'].forEach(id => {
+        document.getElementById(id).addEventListener('input', updateSliderValues);
+    });
+    
+    // 加载浏览器语音列表
+    function loadBrowserVoices() {
+        const voiceSelect = document.getElementById('preferredVoice');
+        const voices = speechSynthesis.getVoices();
+        
+        // 清空现有选项（保留默认选项）
+        while (voiceSelect.children.length > 1) {
+            voiceSelect.removeChild(voiceSelect.lastChild);
+        }
+        
+        // 添加英语语音
+        voices.filter(voice => voice.lang.startsWith('en')).forEach(voice => {
+            const option = document.createElement('option');
+            option.value = voice.name;
+            option.textContent = `${voice.name} (${voice.lang})`;
+            voiceSelect.appendChild(option);
+        });
+    }
+    
+    // 加载配置
+    function loadConfig() {
+        fetch('/api/tts-config')
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    const config = data.config;
+                    
+                    // 设置TTS模式
+                    document.querySelector(`input[name="tts_mode"][value="${config.tts_mode}"]`).checked = true;
+                    
+                    // 设置服务器配置
+                    document.getElementById('serverTimeout').value = config.server_timeout;
+                    
+                    // 设置浏览器配置
+                    document.getElementById('browserRate').value = config.browser_rate;
+                    document.getElementById('browserPitch').value = config.browser_pitch;
+                    document.getElementById('browserVolume').value = config.browser_volume;
+                    
+                    // 设置偏好语音
+                    if (config.preferred_voice) {
+                        document.getElementById('preferredVoice').value = config.preferred_voice;
+                    }
+                    
+                    // 更新滑块显示
+                    updateSliderValues();
+                } else {
+                    showToast('加载配置失败', 'error');
+                }
+            })
+            .catch(error => {
+                console.error('加载配置错误:', error);
+                showToast('加载配置错误', 'error');
+            });
+    }
+    
+    // 保存配置
+    function saveConfig() {
+        const formData = new FormData(form);
+        const config = {};
+        
+        for (let [key, value] of formData.entries()) {
+            if (key === 'server_timeout') {
+                config[key] = parseInt(value);
+            } else if (['browser_rate', 'browser_pitch', 'browser_volume'].includes(key)) {
+                config[key] = parseFloat(value);
+            } else {
+                config[key] = value;
+            }
+        }
+        
+        fetch('/api/tts-config', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(config)
+        })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    showToast('配置保存成功', 'success');
+                    bootstrap.Modal.getInstance(modal).hide();
+                } else {
+                    showToast(data.error || '保存失败', 'error');
+                }
+            })
+            .catch(error => {
+                console.error('保存配置错误:', error);
+                showToast('保存配置错误', 'error');
+            });
+    }
+    
+    // 试听语音
+    function testVoice() {
+        const rate = parseFloat(document.getElementById('browserRate').value);
+        const pitch = parseFloat(document.getElementById('browserPitch').value);
+        const volume = parseFloat(document.getElementById('browserVolume').value);
+        const voiceName = document.getElementById('preferredVoice').value;
+        
+        if ('speechSynthesis' in window) {
+            speechSynthesis.cancel();
+            
+            const utterance = new SpeechSynthesisUtterance('Hello, this is a test of the voice settings.');
+            utterance.lang = 'en-US';
+            utterance.rate = rate;
+            utterance.pitch = pitch;
+            utterance.volume = volume;
+            
+            if (voiceName) {
+                const voices = speechSynthesis.getVoices();
+                const selectedVoice = voices.find(voice => voice.name === voiceName);
+                if (selectedVoice) {
+                    utterance.voice = selectedVoice;
+                }
+            }
+            
+            speechSynthesis.speak(utterance);
+            showToast('正在试听语音设置...', 'info');
+        } else {
+            showToast('浏览器不支持语音合成', 'error');
+        }
+    }
+    
+    // 事件监听
+    modal.addEventListener('show.bs.modal', function() {
+        loadBrowserVoices();
+        loadConfig();
+    });
+    
+    saveBtn.addEventListener('click', saveConfig);
+    testVoiceBtn.addEventListener('click', testVoice);
+    
+    // 语音列表改变时更新
+    if ('speechSynthesis' in window) {
+        speechSynthesis.onvoiceschanged = loadBrowserVoices;
+    }
+});
+</script>
+{% endblock %}

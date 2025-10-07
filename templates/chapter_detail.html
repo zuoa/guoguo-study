@@ -1,0 +1,399 @@
+{% extends "base.html" %}
+
+{% block title %}{{ chapter.name }} - 学习 - 英语单词学习系统{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <div class="d-flex justify-content-between align-items-start flex-wrap gap-3 mb-4">
+            <div class="flex-grow-1">
+                <h1 class="mb-2">
+                    <i class="fas fa-bookmark"></i> {{ chapter.name }}
+                </h1>
+            </div>
+            <div class="d-flex flex-wrap gap-2 chapter-actions">
+                <a href="{{ url_for('dictation_mode', chapter_id=chapter.id) }}" class="btn btn-warning">
+                    <i class="fas fa-headphones"></i> 
+                    <span class="btn-text">听写模式</span>
+                </a>
+                <a href="{{ url_for('index') }}" class="btn btn-secondary">
+                    <i class="fas fa-arrow-left"></i> 
+                    <span class="btn-text">返回首页</span>
+                </a>
+            </div>
+        </div>
+        
+        <div class="row g-3 g-lg-4">
+            <!-- 内容学习 -->
+            <div class="col-12 mb-4">
+                <div class="card">
+                    <div class="card-header bg-primary text-white">
+                        <h5 class="mb-0">
+                            <i class="fas fa-list"></i> 学习内容 ({{ chapter.contents|length }})
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        {% if chapter.contents %}
+                            <div class="row g-3">
+                                {% for content in chapter.contents %}
+                                <div class="col-12 col-md-6 col-lg-4">
+                                    <div class="card h-100 word-card">
+                                        <div class="card-body">
+                                            <div class="word-info">
+                                                <h5 class="word-text">{{ content.text }}</h5>
+                                                
+                                                {% if content.phonetic %}
+                                                <div class="phonetic-container">
+                                                    <div class="phonetic-text">{{ content.phonetic }}</div>
+                                                </div>
+                                                {% endif %}
+                                                
+                                                {% if content.translation %}
+                                                <div class="translation-container">
+                                                    <p class="translation-text mb-0">{{ content.translation }}</p>
+                                                </div>
+                                                {% endif %}
+                                            </div>
+                                            
+                                            <button class="btn btn-sm btn-primary play-word" 
+                                                    onclick="playAudio('{{ content.text }}', this)" title="播放发音">
+                                                <i class="fas fa-play"></i>
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                                {% endfor %}
+                            </div>
+                        {% else %}
+                            <div class="text-center py-5">
+                                <i class="fas fa-inbox fa-3x text-muted mb-3"></i>
+                                <h5 class="text-muted">暂无学习内容</h5>
+                                <p class="text-muted">请联系管理员添加学习内容</p>
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 兼容旧数据的单词和短语显示 -->
+            {% if chapter.words or chapter.phrases %}
+            <div class="col-12 col-lg-6 mb-4 mb-lg-0">
+                <div class="card">
+                    <div class="card-header bg-info text-white">
+                        <h5 class="mb-0">
+                            <i class="fas fa-font"></i> 历史单词 ({{ chapter.words|length }})
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        {% if chapter.words %}
+                            <div class="row g-3">
+                                {% for word in chapter.words %}
+                                <div class="col-12 col-md-6 col-lg-4">
+                                    <div class="card h-100 word-card">
+                                        <div class="card-body">
+                                            <div class="word-info">
+                                                <h5 class="word-text">{{ word.word }}</h5>
+                                                
+                                                {% if word.phonetic %}
+                                                <div class="phonetic-container">
+                                                    <div class="phonetic-text">{{ word.phonetic }}</div>
+                                                </div>
+                                                {% endif %}
+                                                
+                                                {% if word.translation %}
+                                                <div class="translation-container">
+                                                    <p class="translation-text mb-0">{{ word.translation }}</p>
+                                                </div>
+                                                {% endif %}
+                                            </div>
+                                            
+                                            <button class="btn btn-sm btn-primary play-word" 
+                                                    onclick="playAudio('{{ word.word }}', this)" title="播放发音">
+                                                <i class="fas fa-play"></i>
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                                {% endfor %}
+                            </div>
+                        {% else %}
+                            <p class="text-muted">暂无历史单词</p>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            
+            <div class="col-12 col-lg-6">
+                <div class="card">
+                    <div class="card-header bg-warning text-white">
+                        <h5 class="mb-0">
+                            <i class="fas fa-quote-left"></i> 历史短语 ({{ chapter.phrases|length }})
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        {% if chapter.phrases %}
+                            <div class="row g-3">
+                                {% for phrase in chapter.phrases %}
+                                <div class="col-12 col-md-6">
+                                    <div class="card h-100 phrase-card">
+                                        <div class="card-body">
+                                            <div class="word-info">
+                                                <h6 class="phrase-text">{{ phrase.phrase }}</h6>
+                                                
+                                                {% if phrase.phonetic %}
+                                                <div class="phonetic-container">
+                                                    <div class="phonetic-text">{{ phrase.phonetic }}</div>
+                                                </div>
+                                                {% endif %}
+                                                
+                                                {% if phrase.translation %}
+                                                <div class="translation-container">
+                                                    <p class="translation-text mb-0">{{ phrase.translation }}</p>
+                                                </div>
+                                                {% endif %}
+                                            </div>
+                                            
+                                            <button class="btn btn-sm btn-success play-word" 
+                                                    onclick="playAudio('{{ phrase.phrase }}', this)" title="播放发音">
+                                                <i class="fas fa-play"></i>
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                                {% endfor %}
+                            </div>
+                        {% else %}
+                            <p class="text-muted">暂无历史短语</p>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<!-- 音频播放器 -->
+<audio id="audioPlayer" preload="none"></audio>
+{% endblock %}
+
+{% block scripts %}
+<script>
+// TTS模式管理
+let useBrowserTTS = localStorage.getItem('useBrowserTTS') === 'true';
+
+// 更新TTS模式显示
+function updateTTSModeDisplay() {
+    const modeText = document.getElementById('tts-mode-text');
+    const toggleBtn = document.getElementById('tts-mode-toggle');
+    
+    if (useBrowserTTS) {
+        modeText.textContent = '浏览器TTS';
+        toggleBtn.classList.remove('btn-outline-info');
+        toggleBtn.classList.add('btn-info');
+    } else {
+        modeText.textContent = '服务器TTS';
+        toggleBtn.classList.remove('btn-info');
+        toggleBtn.classList.add('btn-outline-info');
+    }
+}
+
+// 初始化显示
+updateTTSModeDisplay();
+
+// TTS模式切换
+document.getElementById('tts-mode-toggle').addEventListener('click', function() {
+    useBrowserTTS = !useBrowserTTS;
+    localStorage.setItem('useBrowserTTS', useBrowserTTS.toString());
+    updateTTSModeDisplay();
+    
+    if (useBrowserTTS) {
+        console.log('已切换到浏览器内置语音');
+    } else {
+        console.log('已切换到服务器语音服务');
+    }
+});
+
+// 重写playAudio函数以支持模式切换
+window.playAudioOriginal = window.playAudio; // 保存原函数
+
+window.playAudio = function(text, button) {
+    if (useBrowserTTS) {
+        // 使用浏览器TTS
+        if (typeof window.playAudioWithBrowserTTS === 'function') {
+            window.playAudioWithBrowserTTS(text, button);
+        } else {
+            // 如果主函数不存在，使用本地实现
+            playBrowserTTSLocal(text, button);
+        }
+    } else {
+        // 使用统一的语音播放函数（内部会自动判断）
+        if (typeof window.playAudioOriginal === 'function') {
+            window.playAudioOriginal(text, button);
+        } else {
+            // 如果原函数不存在，使用本地实现
+            playBrowserTTSLocal(text, button);
+        }
+    }
+};
+
+// 本地浏览器TTS实现（直接使用原生API，避免循环调用）
+function playBrowserTTSLocal(text, button) {
+    if (button && button.disabled) return;
+    
+    let icon, originalClass;
+    if (button) {
+        icon = button.querySelector('i');
+        originalClass = icon.className;
+        
+        icon.className = 'fas fa-volume-up';
+        button.disabled = true;
+        
+        setTimeout(() => {
+            if (icon) icon.className = originalClass;
+            if (button) button.disabled = false;
+        }, 1000);
+    }
+    
+    console.log('Using local browser TTS implementation for:', text);
+    
+    if ('speechSynthesis' in window) {
+        speechSynthesis.cancel();
+        
+        const utterance = new SpeechSynthesisUtterance(text);
+        utterance.lang = 'en-US';
+        utterance.rate = 0.8;
+        utterance.pitch = 1;
+        utterance.volume = 1;
+        
+        const voices = speechSynthesis.getVoices();
+        const englishVoice = voices.find(voice => 
+            voice.lang.startsWith('en') && voice.default
+        ) || voices.find(voice => 
+            voice.lang.startsWith('en')
+        );
+        
+        if (englishVoice) {
+            utterance.voice = englishVoice;
+        }
+        
+        utterance.onstart = () => console.log('Local browser TTS started');
+        utterance.onend = () => console.log('Local browser TTS ended');
+        utterance.onerror = (error) => console.error('Local browser TTS error:', error);
+        
+        if (voices.length === 0) {
+            speechSynthesis.onvoiceschanged = () => {
+                speechSynthesis.speak(utterance);
+            };
+        } else {
+            speechSynthesis.speak(utterance);
+        }
+        
+        if (typeof showToast === 'function') {
+            console.log('浏览器语音播放');
+        }
+    } else {
+        if (typeof showToast === 'function') {
+            console.warn('浏览器不支持语音合成');
+        } else {
+            alert('浏览器不支持语音合成');
+        }
+        
+        if (button && icon) {
+            icon.className = originalClass;
+            button.disabled = false;
+        }
+    }
+}
+// 键盘快捷键支持
+document.addEventListener('keydown', function(e) {
+    // 空格键或回车键播放第一个单词的发音
+    if ((e.code === 'Space' || e.code === 'Enter') && !e.target.matches('input, textarea, select')) {
+        e.preventDefault();
+        const firstPlayButton = document.querySelector('.play-word');
+        if (firstPlayButton) {
+            const content = firstPlayButton.closest('.word-card, .phrase-card');
+            if (content) {
+                const word = content.querySelector('.word-text, .phrase-text').textContent.trim();
+                playAudio(word, firstPlayButton);
+            }
+        }
+    }
+});
+</script>
+
+<!-- 移动端优化样式 -->
+<style>
+@media (max-width: 768px) {
+    .chapter-actions {
+        width: 100%;
+        justify-content: flex-start;
+    }
+    
+    .chapter-actions .btn {
+        padding: 0.5rem 0.75rem;
+        font-size: 0.875rem;
+        border-radius: 8px;
+        min-height: 44px;
+        flex: 1;
+        max-width: calc(33.333% - 0.5rem);
+    }
+    
+    .chapter-actions .btn .btn-text {
+        display: none;
+    }
+    
+    .chapter-actions .btn i {
+        margin: 0;
+        font-size: 1rem;
+    }
+    
+    .d-flex.justify-content-between.align-items-start.mb-4 {
+        margin-bottom: 2rem !important;
+    }
+    
+    h1 {
+        font-size: 1.5rem;
+        margin-bottom: 1rem;
+    }
+    
+    /* 卡片布局优化 */
+    .col-md-6.col-lg-4 {
+        flex: 0 0 100%;
+        max-width: 100%;
+        margin-bottom: 1rem;
+    }
+    
+    .col-lg-6 {
+        flex: 0 0 100%;
+        max-width: 100%;
+        margin-bottom: 1.5rem;
+    }
+    
+    .word-card, .phrase-card {
+        margin-bottom: 1rem;
+    }
+}
+
+@media (max-width: 480px) {
+    .chapter-actions .btn {
+        flex: 1;
+        max-width: none;
+        margin-bottom: 0.5rem;
+    }
+    
+    .chapter-actions {
+        flex-direction: column;
+        width: 100%;
+    }
+    
+    .btn-group {
+        width: 100%;
+    }
+    
+    .btn-group .btn {
+        width: 100%;
+    }
+}
+</style>
+{% endblock %}

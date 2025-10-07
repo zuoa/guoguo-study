@@ -1,0 +1,657 @@
+{% extends "base.html" %}
+
+{% block title %}{{ chapter.name }} - 听写模式 - 英语单词学习系统{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-lg-8">
+        <div class="card shadow">
+            <div class="card-header bg-warning text-dark">
+                <div class="d-flex justify-content-between align-items-center">
+                    <h4 class="mb-0">
+                        <i class="fas fa-headphones"></i> 听写模式 - {{ chapter.name }}
+                    </h4>
+                    <a href="{{ url_for('chapter_detail', chapter_id=chapter.id) }}" class="btn btn-sm btn-outline-dark exit-btn">
+                        <i class="fas fa-times"></i> 
+                        <span class="btn-text">退出</span>
+                    </a>
+                </div>
+            </div>
+            <div class="card-body text-center">
+                <div id="dictation-interface">
+                    <!-- 进度显示 -->
+                    <div class="mb-4">
+                        <div class="progress">
+                            <div class="progress-bar" role="progressbar" style="width: 0%" id="progress-bar"></div>
+                        </div>
+                        <small class="text-muted mt-2 d-block">
+                            进度: <span id="current-index">0</span> / <span id="total-count">0</span>
+                        </small>
+                    </div>
+                    
+                    <!-- 单词显示区域 -->
+                    <div class="dictation-word-area mb-4" style="min-height: 200px;">
+                        <div id="word-display" class="d-none">
+                            <!-- 遮盖的单词显示 -->
+                            <div id="word-covered" class="mb-4">
+                                <div class="dictation-placeholder">
+                                    <i class="fas fa-question-circle fa-3x text-muted mb-3"></i>
+                                    <p class="text-muted">听音识词</p>
+                                    <div id="word-hint" class="text-muted small"></div>
+                                </div>
+                            </div>
+                            <!-- 显示的单词 -->
+                            <div id="word-revealed" class="d-none mb-4">
+                                <h1 id="current-word" class="display-4 mb-3"></h1>
+                                <div class="text-success small">
+                                    <i class="fas fa-check-circle"></i> 答案已显示
+                                </div>
+                            </div>
+                            
+                            <!-- 播放按钮区域 -->
+                            <div class="mb-4">
+                                <button id="play-btn" class="btn btn-primary btn-xl">
+                                    <i class="fas fa-play"></i> 播放
+                                </button>
+                            </div>
+                            
+                            <!-- 显示答案按钮区域 -->
+                            <div class="mb-4">
+                                <button id="show-answer-btn" class="btn btn-outline-secondary btn-sm">
+                                    <i class="fas fa-eye"></i> 显示答案
+                                </button>
+                            </div>
+                            
+                            <!-- 导航按钮区域 -->
+                            <div class="d-flex justify-content-center gap-3">
+                                <button id="prev-btn" class="btn btn-secondary">
+                                    <i class="fas fa-chevron-left"></i> 上一个
+                                </button>
+                                <button id="next-btn" class="btn btn-success">
+                                    下一个 <i class="fas fa-chevron-right"></i>
+                                </button>
+                            </div>
+                        </div>
+                        
+                        <div id="start-screen">
+                            <i class="fas fa-headphones fa-4x text-warning mb-4"></i>
+                            <h3>准备开始听写</h3>
+                            <p class="text-muted mb-4">
+                                本章节共有 <strong>{{ chapter.contents|length + (chapter.words|length) + (chapter.phrases|length) }}</strong> 个学习内容
+                            </p>
+                            <button id="start-btn" class="btn btn-warning btn-lg">
+                                <i class="fas fa-play"></i> 开始听写
+                            </button>
+                        </div>
+                        
+                        <div id="complete-screen" class="d-none">
+                            <i class="fas fa-trophy fa-4x text-success mb-4"></i>
+                            <h3>听写完成！</h3>
+                            <p class="text-muted mb-4">恭喜你完成了所有单词和短语的听写练习</p>
+                            <div class="d-flex justify-content-center gap-3">
+                                <button id="restart-btn" class="btn btn-warning">
+                                    <i class="fas fa-redo"></i> 重新开始
+                                </button>
+                                <a href="{{ url_for('chapter_detail', chapter_id=chapter.id) }}" class="btn btn-primary">
+                                    <i class="fas fa-book"></i> 返回学习
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- 使用说明 -->
+        <div class="card mt-4">
+            <div class="card-header">
+                <h6 class="mb-0">
+                    <i class="fas fa-info-circle"></i> 听写模式说明
+                </h6>
+            </div>
+            <div class="card-body">
+                <ul class="mb-0 small">
+                    <li>听写模式下单词初始状态为遮盖显示</li>
+                    <li>点击"播放"按钮听取单词发音</li>
+                    <li>点击"显示答案"可以查看正确答案</li>
+                    <li>可以重复播放帮助记忆和验证</li>
+                    <li>使用"上一个"/"下一个"按钮控制进度</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 音频播放器 -->
+<audio id="audioPlayer" preload="none"></audio>
+{% endblock %}
+
+{% block scripts %}
+<script>
+// 听写模式数据
+const dictationData = [
+    {% for content in chapter.contents %}
+    {
+        text: "{{ content.text }}",
+        type: "content"
+    }{% if not loop.last or chapter.words or chapter.phrases %},{% endif %}
+    {% endfor %}
+    {% if chapter.contents and (chapter.words or chapter.phrases) %},{% endif %}
+    {% for word in chapter.words %}
+    {
+        text: "{{ word.word }}",
+        type: "word"
+    }{% if not loop.last or chapter.phrases %},{% endif %}
+    {% endfor %}
+    {% if chapter.words and chapter.phrases %},{% endif %}
+    {% for phrase in chapter.phrases %}
+    {
+        text: "{{ phrase.phrase }}",
+        type: "phrase"
+    }{% if not loop.last %},{% endif %}
+    {% endfor %}
+];
+
+let currentIndex = 0;
+let isPlaying = false;
+let isAnswerRevealed = false; // 新增：记录答案是否已显示
+
+// DOM元素
+const startScreen = document.getElementById('start-screen');
+const wordDisplay = document.getElementById('word-display');
+const completeScreen = document.getElementById('complete-screen');
+const wordCovered = document.getElementById('word-covered');
+const wordRevealed = document.getElementById('word-revealed');
+const currentWordEl = document.getElementById('current-word');
+const wordHintEl = document.getElementById('word-hint');
+const playBtn = document.getElementById('play-btn');
+const showAnswerBtn = document.getElementById('show-answer-btn');
+const prevBtn = document.getElementById('prev-btn');
+const nextBtn = document.getElementById('next-btn');
+const startBtn = document.getElementById('start-btn');
+const restartBtn = document.getElementById('restart-btn');
+const progressBar = document.getElementById('progress-bar');
+const currentIndexEl = document.getElementById('current-index');
+const totalCountEl = document.getElementById('total-count');
+const audioPlayer = document.getElementById('audioPlayer');
+
+// 初始化
+totalCountEl.textContent = dictationData.length;
+
+// 等待全局TTS配置加载
+function waitForTTSConfig() {
+    if (window.globalTTSConfig) {
+        console.log('听写模式：全局TTS配置已加载', window.globalTTSConfig);
+        return true;
+    } else {
+        console.log('听写模式：等待全局TTS配置加载...');
+        return false;
+    }
+}
+
+// 每200ms检查一次配置是否加载，最多等待5秒
+let configCheckInterval;
+let configCheckCount = 0;
+const maxConfigChecks = 25; // 5秒 / 200ms = 25次
+
+function startConfigCheck() {
+    configCheckInterval = setInterval(() => {
+        configCheckCount++;
+        if (waitForTTSConfig()) {
+            clearInterval(configCheckInterval);
+            console.log('听写模式：TTS配置加载完成，可以开始使用');
+        } else if (configCheckCount >= maxConfigChecks) {
+            clearInterval(configCheckInterval);
+            console.warn('听写模式：TTS配置加载超时，将使用默认配置');
+        }
+    }, 200);
+}
+
+// 开始检查TTS配置
+startConfigCheck();
+
+// 开始听写
+startBtn.addEventListener('click', function() {
+    if (dictationData.length === 0) {
+        alert('本章节暂无单词或短语');
+        return;
+    }
+    
+    startScreen.classList.add('d-none');
+    wordDisplay.classList.remove('d-none');
+    currentIndex = 0;
+    showCurrentWord();
+});
+
+// 重新开始
+restartBtn.addEventListener('click', function() {
+    completeScreen.classList.add('d-none');
+    wordDisplay.classList.remove('d-none');
+    currentIndex = 0;
+    showCurrentWord();
+});
+
+// 显示当前单词
+function showCurrentWord() {
+    if (currentIndex >= dictationData.length) {
+        // 显示完成界面
+        wordDisplay.classList.add('d-none');
+        completeScreen.classList.remove('d-none');
+        return;
+    }
+    
+    const current = dictationData[currentIndex];
+    currentWordEl.textContent = current.text;
+    
+    // 重置答案显示状态
+    isAnswerRevealed = false;
+    showWordCovered();
+    
+    // 生成单词提示（显示字符数量）
+    const wordLength = current.text.length;
+    const hintText = `${wordLength} 个字符`;
+    if (current.type === 'phrase') {
+        wordHintEl.textContent = `短语 (${hintText})`;
+    } else if (current.type === 'word') {
+        wordHintEl.textContent = `单词 (${hintText})`;
+    } else {
+        wordHintEl.textContent = `内容 (${hintText})`;
+    }
+    
+    // 更新进度
+    const progress = ((currentIndex + 1) / dictationData.length) * 100;
+    progressBar.style.width = progress + '%';
+    currentIndexEl.textContent = currentIndex + 1;
+    
+    // 更新按钮状态
+    prevBtn.disabled = currentIndex === 0;
+    nextBtn.textContent = currentIndex === dictationData.length - 1 ? '完成' : '下一个 ';
+    if (currentIndex === dictationData.length - 1) {
+        nextBtn.innerHTML = '完成 <i class="fas fa-check"></i>';
+    } else {
+        nextBtn.innerHTML = '下一个 <i class="fas fa-chevron-right"></i>';
+    }
+    
+    // 自动播放当前单词发音（根据规范延迟500ms）
+    setTimeout(() => {
+        console.log('自动播放当前单词：', current.text);
+        // 检查全局TTS配置是否加载
+        if (window.globalTTSConfig) {
+            console.log('使用全局TTS配置进行自动播放：', window.globalTTSConfig);
+        } else {
+            console.warn('全局TTS配置未加载，使用默认参数');
+        }
+        playCurrentWord();
+    }, 500); // 延迟500ms播放，给界面更新时间
+}
+
+// 显示遮盖状态
+function showWordCovered() {
+    wordCovered.classList.remove('d-none');
+    wordRevealed.classList.add('d-none');
+    showAnswerBtn.disabled = false;
+    showAnswerBtn.innerHTML = '<i class="fas fa-eye"></i> 显示答案';
+}
+
+// 显示答案
+function showWordRevealed() {
+    wordCovered.classList.add('d-none');
+    wordRevealed.classList.remove('d-none');
+    showAnswerBtn.disabled = true;
+    showAnswerBtn.innerHTML = '<i class="fas fa-check"></i> 已显示';
+    isAnswerRevealed = true;
+}
+
+// 播放发音（直接使用main.js中的全局函数）
+function playCurrentWord() {
+    if (isPlaying) return;
+    
+    const current = dictationData[currentIndex];
+    // 直接调用main.js中的统一函数
+    if (typeof window.playAudio === 'function') {
+        window.playAudio(current.text, playBtn);
+    } else {
+        // 如果主函数不存在，使用浏览器TTS备用方案
+        playAudioFallback(current.text);
+    }
+}
+
+// 手动播放发音（用户点击按钮）
+function manualPlayCurrentWord() {
+    if (isPlaying) return;
+    
+    const current = dictationData[currentIndex];
+    // 直接调用main.js中的统一函数
+    if (typeof window.playAudio === 'function') {
+        window.playAudio(current.text, playBtn);
+    } else {
+        // 如果主函数不存在，使用浏览器TTS备用方案
+        playAudioFallback(current.text);
+    }
+}
+
+// 使用浏览器语音播放
+function playCurrentWordBrowser() {
+    const current = dictationData[currentIndex];
+    playAudioDirectly(current.text, document.getElementById('play-browser-btn'));
+}
+
+// 直接使用浏览器TTS（使用全局配置）
+function playAudioDirectly(text, button) {
+    if (typeof window.playAudioWithBrowserTTS === 'function') {
+        window.playAudioWithBrowserTTS(text, button);
+    } else {
+        // 使用全局配置的备用方案
+        playAudioFallback(text);
+    }
+}
+
+// 浏览器内置语音合成备用方案（使用全局TTS配置）
+function playAudioFallback(text) {
+    if ('speechSynthesis' in window) {
+        console.log('Using browser speech synthesis as fallback for:', text);
+        
+        // 停止任何正在进行的语音
+        speechSynthesis.cancel();
+        
+        const utterance = new SpeechSynthesisUtterance(text);
+        utterance.lang = 'en-US';
+        
+        // 使用全局TTS配置中的参数，如果配置未加载则使用默认值
+        if (window.globalTTSConfig) {
+            utterance.rate = window.globalTTSConfig.browser_rate;
+            utterance.pitch = window.globalTTSConfig.browser_pitch;
+            utterance.volume = window.globalTTSConfig.browser_volume;
+            
+            console.log('Using global TTS config in dictation:', {
+                rate: utterance.rate,
+                pitch: utterance.pitch,
+                volume: utterance.volume,
+                preferred_voice: window.globalTTSConfig.preferred_voice
+            });
+        } else {
+            console.log('Global TTS config not loaded, using defaults');
+            utterance.rate = 0.8;
+            utterance.pitch = 1.0;
+            utterance.volume = 1.0;
+        }
+        
+        // 获取英语语音，优先使用配置中的偏好语音
+        const selectVoiceAndSpeak = () => {
+            const voices = speechSynthesis.getVoices();
+            let selectedVoice = null;
+            
+            // 首先尝试使用配置中的偏好语音
+            if (window.globalTTSConfig && window.globalTTSConfig.preferred_voice) {
+                selectedVoice = voices.find(voice => voice.name === window.globalTTSConfig.preferred_voice);
+                if (selectedVoice) {
+                    console.log('Using preferred voice from config:', selectedVoice.name, selectedVoice.lang);
+                } else {
+                    console.warn('Preferred voice not found:', window.globalTTSConfig.preferred_voice);
+                }
+            }
+            
+            // 如果没有找到偏好语音，使用默认的英语语音
+            if (!selectedVoice) {
+                selectedVoice = voices.find(voice => 
+                    voice.lang.startsWith('en') && voice.default
+                ) || voices.find(voice => 
+                    voice.lang.startsWith('en')
+                );
+                
+                if (selectedVoice) {
+                    console.log('Using default English voice:', selectedVoice.name, selectedVoice.lang);
+                }
+            }
+            
+            if (selectedVoice) {
+                utterance.voice = selectedVoice;
+            }
+            
+            utterance.onstart = () => console.log('Browser TTS started for dictation:', text);
+            utterance.onend = () => console.log('Browser TTS ended for dictation:', text);
+            utterance.onerror = (error) => console.error('Browser TTS error in dictation:', error);
+            
+            speechSynthesis.speak(utterance);
+        };
+        
+        // 确保语音列表已加载
+        if (speechSynthesis.getVoices().length === 0) {
+            console.log('Waiting for voices to load in dictation...');
+            speechSynthesis.onvoiceschanged = () => {
+                console.log('Voices loaded in dictation, proceeding with speech');
+                selectVoiceAndSpeak();
+                speechSynthesis.onvoiceschanged = null; // 避免重复调用
+            };
+        } else {
+            selectVoiceAndSpeak();
+        }
+        
+        return true;
+    } else {
+        console.warn('Browser speech synthesis not supported');
+        return false;
+    }
+}
+
+// 事件监听
+playBtn.addEventListener('click', manualPlayCurrentWord);
+showAnswerBtn.addEventListener('click', function() {
+    if (!isAnswerRevealed) {
+        showWordRevealed();
+    }
+});
+
+prevBtn.addEventListener('click', function() {
+    if (currentIndex > 0) {
+        currentIndex--;
+        showCurrentWord();
+    }
+});
+
+nextBtn.addEventListener('click', function() {
+    currentIndex++;
+    showCurrentWord();
+});
+
+// 键盘快捷键
+document.addEventListener('keydown', function(e) {
+    if (wordDisplay.classList.contains('d-none')) return;
+    
+    switch(e.key) {
+        case ' ':
+        case 'Enter':
+            e.preventDefault();
+            manualPlayCurrentWord();
+            break;
+        case 'ArrowLeft':
+            e.preventDefault();
+            if (currentIndex > 0) {
+                prevBtn.click();
+            }
+            break;
+        case 'ArrowRight':
+            e.preventDefault();
+            nextBtn.click();
+            break;
+    }
+});
+</script>
+
+<!-- 移动端优化样式 -->
+<style>
+@media (max-width: 768px) {
+    .col-lg-8 {
+        flex: 0 0 100%;
+        max-width: 100%;
+        padding: 0 1rem;
+    }
+    
+    .card-header {
+        padding: 1rem 1.25rem;
+    }
+    
+    .card-header h4 {
+        font-size: 1.1rem;
+        margin-bottom: 0;
+    }
+    
+    .exit-btn {
+        padding: 0.5rem 0.75rem;
+        font-size: 0.8rem;
+        min-height: 36px;
+    }
+    
+    .exit-btn .btn-text {
+        display: none;
+    }
+    
+    .exit-btn i {
+        margin: 0;
+    }
+    
+    .card-body {
+        padding: 1.25rem;
+    }
+    
+    /* 听写区域优化 */
+    .dictation-word-area {
+        min-height: 250px;
+        padding: 2rem 1rem;
+        margin: 1rem 0;
+    }
+    
+    #current-word {
+        font-size: 1.5rem;
+        letter-spacing: 2px;
+    }
+    
+    .dictation-placeholder {
+        min-height: 120px;
+        padding: 1.5rem 1rem;
+    }
+    
+    .dictation-placeholder i {
+        font-size: 2.5rem;
+    }
+    
+    /* 按钮优化 */
+    .btn-lg {
+        padding: 0.75rem 1.25rem;
+        font-size: 0.95rem;
+        min-height: 48px;
+    }
+    
+    .d-flex.justify-content-center.gap-3 {
+        flex-direction: column;
+        gap: 0.75rem !important;
+    }
+    
+    .d-flex.justify-content-center.gap-3 .btn {
+        width: 100%;
+        max-width: 300px;
+        margin: 0 auto;
+    }
+    
+    /* 进度显示优化 */
+    .progress {
+        height: 6px;
+        margin-bottom: 1rem;
+    }
+    
+    /* 使用说明优化 */
+    .card.mt-4 {
+        margin-top: 2rem !important;
+    }
+    
+    .card.mt-4 .card-body {
+        padding: 1rem;
+    }
+    
+    .card.mt-4 ul {
+        font-size: 0.875rem;
+    }
+}
+
+@media (max-width: 480px) {
+    .col-lg-8 {
+        padding: 0 0.75rem;
+    }
+    
+    .card-header {
+        padding: 0.875rem 1rem;
+    }
+    
+    .card-header h4 {
+        font-size: 1rem;
+    }
+    
+    .card-body {
+        padding: 1rem;
+    }
+    
+    .dictation-word-area {
+        min-height: 200px;
+        padding: 1.5rem 0.75rem;
+    }
+    
+    #current-word {
+        font-size: 1.25rem;
+        letter-spacing: 1px;
+    }
+    
+    .dictation-placeholder {
+        min-height: 100px;
+        padding: 1rem 0.75rem;
+    }
+    
+    .dictation-placeholder i {
+        font-size: 2rem;
+    }
+    
+    .btn-lg {
+        padding: 0.75rem 1rem;
+        font-size: 0.875rem;
+        min-height: 44px;
+    }
+    
+    .d-flex.justify-content-center.gap-3 .btn {
+        max-width: none;
+    }
+}
+
+/* 横屏模式优化 */
+@media (max-height: 500px) and (orientation: landscape) {
+    .dictation-word-area {
+        min-height: 150px;
+        padding: 1rem;
+        margin: 0.5rem 0;
+    }
+    
+    #current-word {
+        font-size: 1.25rem;
+        margin-bottom: 0.5rem !important;
+    }
+    
+    .btn-lg {
+        padding: 0.5rem 1rem;
+        font-size: 0.875rem;
+        min-height: 40px;
+    }
+    
+    .d-flex.justify-content-center.gap-3 {
+        gap: 0.5rem !important;
+        flex-direction: row;
+    }
+    
+    .d-flex.justify-content-center.gap-3 .btn {
+        flex: 1;
+        max-width: none;
+    }
+    
+    .card.mt-4 {
+        margin-top: 1rem !important;
+    }
+}
+</style>
+{% endblock %}

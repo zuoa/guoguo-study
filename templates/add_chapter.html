@@ -1,0 +1,122 @@
+{% extends "base.html" %}
+
+{% block title %}添加章节 - 英语单词学习系统{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-lg-8">
+        <div class="card shadow">
+            <div class="card-header">
+                <h4 class="mb-0">
+                    <i class="fas fa-plus me-2"></i> 添加新章节
+                </h4>
+            </div>
+            <div class="card-body">
+                <form method="POST">
+                    <div class="mb-3">
+                        <label for="name" class="form-label">
+                            <i class="fas fa-bookmark me-1"></i> 章节名称
+                        </label>
+                        <input type="text" class="form-control" id="name" name="name" 
+                               placeholder="例如：日常对话、商务英语、旅行用语等">
+                        <div class="form-text">
+                            <i class="fas fa-info-circle me-1"></i> 留空将自动使用当前日期作为名称
+                        </div>
+                    </div>
+                    
+                    <div class="mb-4">
+                        <label for="text_content" class="form-label">
+                            <i class="fas fa-file-text me-1"></i> 英文文本内容
+                        </label>
+                        <textarea class="form-control" id="text_content" name="text_content" 
+                                  rows="12" placeholder="请粘贴你的英文文本，系统将按空格分割内容..."></textarea>
+                        <div class="form-text">
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <i class="fas fa-lightbulb me-1 text-warning"></i> 
+                                    <strong>分割规则：</strong>
+                                    <ul class="mt-2 mb-0">
+                                        <li>按多个空格（2个或以上）分割</li>
+                                        <li>按换行符分割</li>
+                                        <li>不区分单词和短语</li>
+                                        <li>支持用户确认和编辑</li>
+                                    </ul>
+                                </div>
+                                <div class="col-md-6">
+                                    <i class="fas fa-file-alt me-1 text-info"></i> 
+                                    <strong>支持的文本类型：</strong>
+                                    <ul class="mt-2 mb-0">
+                                        <li>单词列表</li>
+                                        <li>短语合集</li>
+                                        <li>句子和对话</li>
+                                        <li>段落文本</li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="d-flex gap-3">
+                        <button type="submit" class="btn btn-success">
+                            <i class="fas fa-magic me-2"></i> 创建章节
+                        </button>
+                        <a href="{{ url_for('admin_dashboard') }}" class="btn btn-outline-secondary">
+                            <i class="fas fa-arrow-left me-2"></i> 返回管理台
+                        </a>
+                    </div>
+                </form>
+            </div>
+        </div>
+        
+        <div class="card mt-4">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="fas fa-question-circle me-2"></i> 使用指南
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <h6 class="text-primary">
+                            <i class="fas fa-cogs me-1"></i> 系统功能
+                        </h6>
+                        <ul class="list-unstyled">
+                            <li><i class="fas fa-check text-success me-2"></i> 按空格分割内容</li>
+                            <li><i class="fas fa-check text-success me-2"></i> 用户确认分割结果</li>
+                            <li><i class="fas fa-check text-success me-2"></i> 自动获取中文翻译</li>
+                            <li><i class="fas fa-check text-success me-2"></i> 自动获取英文音标</li>
+                        </ul>
+                    </div>
+                    <div class="col-md-6">
+                        <h6 class="text-primary">
+                            <i class="fas fa-tips me-1"></i> 使用建议
+                        </h6>
+                        <ul class="list-unstyled">
+                            <li><i class="fas fa-lightbulb text-warning me-2"></i> 使用多个空格分隔不同内容</li>
+                            <li><i class="fas fa-lightbulb text-warning me-2"></i> 每行一个单词或短语更好</li>
+                            <li><i class="fas fa-lightbulb text-warning me-2"></i> 可以混合单词和短语</li>
+                            <li><i class="fas fa-lightbulb text-warning me-2"></i> 建议不超过50个项目</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.form-text ul {
+    font-size: 0.8rem;
+    padding-left: 1rem;
+}
+
+.form-text ul li {
+    margin-bottom: 0.25rem;
+}
+
+.list-unstyled li {
+    margin-bottom: 0.5rem;
+    padding: 0.25rem 0;
+}
+</style>
+{% endblock %}

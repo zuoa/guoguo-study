@@ -1,0 +1,265 @@
+{% extends "base.html" %}
+
+{% block title %}预览分割结果 - 英语学习系统{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-lg-10">
+        <div class="card shadow">
+            <div class="card-header">
+                <h4 class="mb-0">
+                    <i class="fas fa-eye me-2"></i> 预览分割结果
+                </h4>
+                <div class="mt-2">
+                    <small class="text-light">章节名称：{{ chapter_name }}</small>
+                </div>
+            </div>
+            <div class="card-body">
+                <form method="POST" action="{{ url_for('confirm_content_split') }}">
+                    <div class="alert alert-info mb-4">
+                        <i class="fas fa-info-circle me-2"></i>
+                        <strong>分割说明：</strong>
+                        系统已根据多个空格（2个或以上）自动分割文本内容。您可以编辑、删除或添加内容项，确认无误后点击创建章节。
+                    </div>
+                    
+                    <div class="mb-4">
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            <h5 class="mb-0">
+                                <i class="fas fa-list me-2"></i> 分割内容 ({{ content_items|length }} 项)
+                            </h5>
+                            <div>
+                                <button type="button" class="btn btn-outline-success btn-sm" onclick="addNewItem()">
+                                    <i class="fas fa-plus me-1"></i> 添加项目
+                                </button>
+                                <button type="button" class="btn btn-outline-danger btn-sm" onclick="clearAll()">
+                                    <i class="fas fa-trash me-1"></i> 清空全部
+                                </button>
+                            </div>
+                        </div>
+                        
+                        <div id="content-items-container">
+                            {% for item in content_items %}
+                            <div class="content-item-row mb-3">
+                                <div class="input-group">
+                                    <span class="input-group-text">
+                                        <i class="fas fa-grip-vertical"></i>
+                                    </span>
+                                    <input type="text" class="form-control" name="content_items" value="{{ item }}" 
+                                           placeholder="输入内容..." required>
+                                    <button type="button" class="btn btn-outline-danger" onclick="removeItem(this)">
+                                        <i class="fas fa-trash"></i>
+                                    </button>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                        
+                        <div id="empty-state" class="text-center py-5" style="display: none;">
+                            <i class="fas fa-inbox fa-3x text-muted mb-3"></i>
+                            <h5 class="text-muted">暂无内容项</h5>
+                            <p class="text-muted">点击"添加项目"按钮开始添加内容</p>
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="card border-info">
+                                <div class="card-body">
+                                    <h6 class="card-title text-info">
+                                        <i class="fas fa-lightbulb me-1"></i> 分割提示
+                                    </h6>
+                                    <ul class="list-unstyled small mb-0">
+                                        <li><i class="fas fa-check text-success me-1"></i> 系统按多个空格自动分割</li>
+                                        <li><i class="fas fa-check text-success me-1"></i> 可以是单词、短语或句子</li>
+                                        <li><i class="fas fa-check text-success me-1"></i> 支持手动编辑和调整</li>
+                                        <li><i class="fas fa-check text-success me-1"></i> 创建后自动获取音标和翻译</li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="card border-warning">
+                                <div class="card-body">
+                                    <h6 class="card-title text-warning">
+                                        <i class="fas fa-exclamation-triangle me-1"></i> 注意事项
+                                    </h6>
+                                    <ul class="list-unstyled small mb-0">
+                                        <li><i class="fas fa-info text-primary me-1"></i> 空内容项将被自动过滤</li>
+                                        <li><i class="fas fa-info text-primary me-1"></i> 重复内容会被去重处理</li>
+                                        <li><i class="fas fa-info text-primary me-1"></i> 获取音标和翻译需要时间</li>
+                                        <li><i class="fas fa-info text-primary me-1"></i> 网络问题可能影响获取结果</li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="d-flex gap-3 mt-4">
+                        <button type="submit" class="btn btn-success btn-lg">
+                            <i class="fas fa-check me-2"></i> 确认创建章节
+                        </button>
+                        <a href="{{ url_for('add_chapter') }}" class="btn btn-outline-secondary btn-lg">
+                            <i class="fas fa-arrow-left me-2"></i> 返回编辑
+                        </a>
+                        <a href="{{ url_for('admin_dashboard') }}" class="btn btn-outline-secondary btn-lg">
+                            <i class="fas fa-home me-2"></i> 返回管理台
+                        </a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// 添加新项目
+function addNewItem() {
+    const container = document.getElementById('content-items-container');
+    const emptyState = document.getElementById('empty-state');
+    
+    const newRow = document.createElement('div');
+    newRow.className = 'content-item-row mb-3';
+    newRow.innerHTML = `
+        <div class="input-group">
+            <span class="input-group-text">
+                <i class="fas fa-grip-vertical"></i>
+            </span>
+            <input type="text" class="form-control" name="content_items" value="" 
+                   placeholder="输入内容..." required>
+            <button type="button" class="btn btn-outline-danger" onclick="removeItem(this)">
+                <i class="fas fa-trash"></i>
+            </button>
+        </div>
+    `;
+    
+    container.appendChild(newRow);
+    newRow.querySelector('input').focus();
+    
+    // 隐藏空状态
+    emptyState.style.display = 'none';
+    updateItemCount();
+}
+
+// 删除项目
+function removeItem(button) {
+    const row = button.closest('.content-item-row');
+    row.remove();
+    
+    checkEmptyState();
+    updateItemCount();
+}
+
+// 清空全部
+function clearAll() {
+    if (confirm('确定要清空所有内容项吗？')) {
+        const container = document.getElementById('content-items-container');
+        container.innerHTML = '';
+        checkEmptyState();
+        updateItemCount();
+    }
+}
+
+// 检查空状态
+function checkEmptyState() {
+    const container = document.getElementById('content-items-container');
+    const emptyState = document.getElementById('empty-state');
+    
+    if (container.children.length === 0) {
+        emptyState.style.display = 'block';
+    } else {
+        emptyState.style.display = 'none';
+    }
+}
+
+// 更新项目计数
+function updateItemCount() {
+    const container = document.getElementById('content-items-container');
+    const count = container.children.length;
+    const countElement = document.querySelector('h5 i + span');
+    if (countElement) {
+        countElement.textContent = `分割内容 (${count} 项)`;
+    }
+}
+
+// 页面加载时检查空状态
+document.addEventListener('DOMContentLoaded', function() {
+    checkEmptyState();
+    
+    // 为所有输入框添加实时验证
+    document.addEventListener('input', function(e) {
+        if (e.target.name === 'content_items') {
+            const value = e.target.value.trim();
+            if (value === '') {
+                e.target.classList.add('is-invalid');
+            } else {
+                e.target.classList.remove('is-invalid');
+            }
+        }
+    });
+});
+
+// 表单提交前验证
+document.querySelector('form').addEventListener('submit', function(e) {
+    const inputs = document.querySelectorAll('input[name="content_items"]');
+    const validInputs = Array.from(inputs).filter(input => input.value.trim() !== '');
+    
+    if (validInputs.length === 0) {
+        e.preventDefault();
+        alert('请至少添加一个有效的内容项！');
+        return false;
+    }
+    
+    // 显示加载状态
+    const submitBtn = e.target.querySelector('button[type="submit"]');
+    const originalHtml = submitBtn.innerHTML;
+    submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i> 正在创建章节...';
+    submitBtn.disabled = true;
+    
+    // 防止重复提交
+    setTimeout(() => {
+        submitBtn.innerHTML = originalHtml;
+        submitBtn.disabled = false;
+    }, 5000);
+});
+</script>
+
+<style>
+.content-item-row {
+    animation: fadeInUp 0.3s ease-out;
+}
+
+.content-item-row .input-group-text {
+    cursor: move;
+    background: var(--bg-light);
+    border-color: #e2e8f0;
+}
+
+.content-item-row input.is-invalid {
+    border-color: #dc3545;
+}
+
+.content-item-row input:focus {
+    box-shadow: 0 0 0 0.2rem rgba(16, 185, 129, 0.25);
+    border-color: var(--primary-color);
+}
+
+@keyframes fadeInUp {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.card-border-info {
+    border-color: #17a2b8 !important;
+}
+
+.card-border-warning {
+    border-color: #ffc107 !important;
+}
+</style>
+{% endblock %}

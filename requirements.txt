@@ -1,0 +1,7 @@
+Flask
+Flask-SQLAlchemy
+Flask-Login
+gTTS==2.4.0
+nltk==3.8.1
+python-dotenv
+requests

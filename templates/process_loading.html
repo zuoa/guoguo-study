@@ -1,0 +1,272 @@
+{% extends "base.html" %}
+
+{% block title %}处理内容中 - 英语学习系统{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-lg-8">
+        <div class="card shadow">
+            <div class="card-header">
+                <h4 class="mb-0">
+                    <i class="fas fa-cogs me-2"></i> 正在处理内容
+                </h4>
+                <div class="mt-2">
+                    <small class="text-light">章节：{{ chapter.name }}</small>
+                </div>
+            </div>
+            <div class="card-body">
+                <div class="alert alert-info mb-4">
+                    <i class="fas fa-info-circle me-2"></i>
+                    <strong>处理进度：</strong>
+                    正在为每个内容项获取音标和中文翻译，请稍候...
+                </div>
+                
+                <!-- 进度条 -->
+                <div class="mb-4">
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <span class="fw-semibold">处理进度</span>
+                        <span id="progress-text">0 / {{ items|length }}</span>
+                    </div>
+                    <div class="progress mb-3" style="height: 12px;">
+                        <div id="progress-bar" class="progress-bar progress-bar-striped progress-bar-animated" 
+                             role="progressbar" style="width: 0%" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100">
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- 内容列表 -->
+                <div class="mb-4">
+                    <h5 class="mb-3">
+                        <i class="fas fa-list me-2"></i> 内容项目 ({{ items|length }})
+                    </h5>
+                    <div id="content-list">
+                        {% for item in items %}
+                        <div class="content-processing-item mb-3" data-index="{{ loop.index0 }}" data-text="{{ item }}">
+                            <div class="card border-0 shadow-sm">
+                                <div class="card-body py-3">
+                                    <div class="row align-items-center">
+                                        <div class="col-md-6">
+                                            <div class="d-flex align-items-center">
+                                                <div class="processing-status me-3">
+                                                    <i class="fas fa-clock text-warning"></i>
+                                                </div>
+                                                <div>
+                                                    <h6 class="mb-1">{{ item }}</h6>
+                                                    <small class="text-muted status-text">等待处理...</small>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <div class="processing-results">
+                                                <div class="phonetic-result mb-1" style="display: none;">
+                                                    <small class="text-muted">音标：</small>
+                                                    <span class="phonetic-text"></span>
+                                                </div>
+                                                <div class="translation-result" style="display: none;">
+                                                    <small class="text-muted">翻译：</small>
+                                                    <span class="translation-text"></span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+                
+                <!-- 完成状态 -->
+                <div id="completion-section" style="display: none;">
+                    <div class="alert alert-success">
+                        <i class="fas fa-check-circle me-2"></i>
+                        <strong>处理完成！</strong> 所有内容项已成功处理并保存到章节中。
+                    </div>
+                    <div class="d-flex gap-3">
+                        <a href="{{ url_for('admin_chapter_detail', chapter_id=chapter.id) }}" class="btn btn-success">
+                            <i class="fas fa-eye me-2"></i> 查看章节详情
+                        </a>
+                        <a href="{{ url_for('admin_dashboard') }}" class="btn btn-outline-secondary">
+                            <i class="fas fa-home me-2"></i> 返回管理台
+                        </a>
+                    </div>
+                </div>
+                
+                <!-- 错误处理 -->
+                <div id="error-section" style="display: none;">
+                    <div class="alert alert-warning">
+                        <i class="fas fa-exclamation-triangle me-2"></i>
+                        <strong>部分内容处理失败</strong> 
+                        <div id="error-details" class="mt-2"></div>
+                    </div>
+                    <div class="d-flex gap-3">
+                        <button class="btn btn-warning" onclick="retryFailedItems()">
+                            <i class="fas fa-redo me-2"></i> 重试失败项  
+                        </button>
+                        <a href="{{ url_for('admin_chapter_detail', chapter_id=chapter.id) }}" class="btn btn-outline-success">
+                            <i class="fas fa-eye me-2"></i> 查看当前结果
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// 使用全局变量传递数据
+window.contentData = {
+    items: {{ items | tojson | safe }},
+    chapterId: {{ chapter.id }}
+};
+
+document.addEventListener('DOMContentLoaded', function() {
+    const items = window.contentData.items;
+    const chapterId = window.contentData.chapterId;
+    let processedCount = 0;
+    let failedItems = [];
+    
+    processAllItems();
+    
+    async function processAllItems() {
+        for (let i = 0; i < items.length; i++) {
+            await processItem(i, items[i]);
+            await new Promise(resolve => setTimeout(resolve, 500));
+        }
+        
+        if (failedItems.length === 0) {
+            showCompletion();
+        } else {
+            showErrors();
+        }
+    }
+    
+    async function processItem(index, text) {
+        const itemElement = document.querySelector('[data-index="' + index + '"]');
+        const statusIcon = itemElement.querySelector('.processing-status i');
+        const statusText = itemElement.querySelector('.status-text');
+        const phoneticResult = itemElement.querySelector('.phonetic-result');
+        const translationResult = itemElement.querySelector('.translation-result');
+        
+        statusIcon.className = 'fas fa-spinner fa-spin text-primary';
+        statusText.textContent = '正在处理...';
+        
+        try {
+            const response = await fetch('/api/process-content-item', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ chapter_id: chapterId, text: text })
+            });
+            
+            const result = await response.json();
+            
+            if (result.success) {
+                statusIcon.className = 'fas fa-check-circle text-success';
+                statusText.textContent = '处理完成';
+                
+                if (result.phonetic) {
+                    phoneticResult.querySelector('.phonetic-text').textContent = result.phonetic;
+                    phoneticResult.style.display = 'block';
+                }
+                if (result.translation) {
+                    translationResult.querySelector('.translation-text').textContent = result.translation;
+                    translationResult.style.display = 'block';
+                }
+                
+                processedCount++;
+            } else {
+                throw new Error(result.error || '处理失败');
+            }
+        } catch (error) {
+            statusIcon.className = 'fas fa-times-circle text-danger';
+            statusText.textContent = '处理失败: ' + error.message;
+            failedItems.push({ index: index, text: text, error: error.message });
+        }
+        
+        updateProgress();
+    }
+    
+    function updateProgress() {
+        const totalProcessed = processedCount + failedItems.length;
+        const percentage = Math.round((totalProcessed / items.length) * 100);
+        
+        document.getElementById('progress-bar').style.width = percentage + '%';
+        document.getElementById('progress-bar').setAttribute('aria-valuenow', percentage);
+        document.getElementById('progress-text').textContent = totalProcessed + ' / ' + items.length;
+    }
+    
+    function showCompletion() {
+        document.getElementById('completion-section').style.display = 'block';
+    }
+    
+    function showErrors() {
+        const errorSection = document.getElementById('error-section');
+        const errorDetails = document.getElementById('error-details');
+        
+        let errorHtml = '<ul class="mb-0">';
+        failedItems.forEach(function(item) {
+            errorHtml += '<li><strong>' + item.text + '</strong>: ' + item.error + '</li>';
+        });
+        errorHtml += '</ul>';
+        
+        errorDetails.innerHTML = errorHtml;
+        errorSection.style.display = 'block';
+    }
+    
+    window.retryFailedItems = async function() {
+        const retryButton = document.querySelector('[onclick="retryFailedItems()"]');
+        retryButton.disabled = true;
+        retryButton.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i> 重试中...';
+        
+        const itemsToRetry = failedItems.slice();
+        failedItems = [];
+        
+        for (let item of itemsToRetry) {
+            await processItem(item.index, item.text);
+            await new Promise(resolve => setTimeout(resolve, 500));
+        }
+        
+        if (failedItems.length === 0) {
+            document.getElementById('error-section').style.display = 'none';
+            showCompletion();
+        } else {
+            showErrors();
+        }
+        
+        retryButton.disabled = false;
+        retryButton.innerHTML = '<i class="fas fa-redo me-2"></i> 重试失败项';
+    };
+});
+</script>
+
+<style>
+.content-processing-item {
+    transition: all 0.3s ease;
+}
+
+.processing-status i {
+    font-size: 1.2rem;
+    width: 20px;
+    text-align: center;
+}
+
+.phonetic-text {
+    font-family: 'Courier New', monospace;
+    background: rgba(99, 102, 241, 0.1);
+    padding: 0.2rem 0.4rem;
+    border-radius: 4px;
+    font-size: 0.9rem;
+}
+
+.translation-text {
+    background: rgba(16, 185, 129, 0.1);
+    padding: 0.2rem 0.4rem;
+    border-radius: 4px;
+    font-size: 0.9rem;
+}
+
+.progress-bar {
+    background: var(--primary-gradient);
+}
+</style>
+{% endblock %}
