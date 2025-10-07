@@ -6,4 +6,4 @@ COPY . .
 EXPOSE 50001
 ENV TZ=Asia/Shanghai
 ENV PYTHONPATH="/app:$PYTHONPATH"
-CMD ["gunicorn", "-c", "gunicorn.conf.py", "app:app"]
+ENTRYPOINT ["/app/entrypoint.sh"]

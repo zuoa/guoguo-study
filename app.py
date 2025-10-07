@@ -812,6 +812,18 @@ def get_browser_voices():
     })
 
 
+@app.cli.command("init-db")
+def init_db():
+    """Initialize the database tables"""
+    try:
+        with app.app_context():
+            # 创建表，如果表已存在则添加新列
+            db.create_all()
+    except Exception as e:
+        print(f"数据库初始化失败: {str(e)}")
+
+
+
 if __name__ == '__main__':
     with app.app_context():
         # 创建表，如果表已存在则添加新列
