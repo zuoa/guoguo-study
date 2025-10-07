@@ -1,0 +1,13 @@
+services:
+  app:
+    image: ghcr.io/zuoa/guoguo-study:main
+    restart: "always"
+    ports:
+      - "50001:50001"
+    volumes:
+      - ./data:/data
+    environment:
+      - "TZ=Asia/Shanghai"
+      - "AUTH_CODE=1005"
+      - "BAIDU_APPID="
+      - "BAIDU_APPKEY="
